@@ -29,12 +29,9 @@ int construct_table(void *table, int *levels, int num_levels) {
 			level_ptr += levels[i+1];
 		}
 		
-		fprintf(stderr, "diff btwn table_ptr: %d, level size: %d\n",(void *) table_ptr - table, level_size);
 
 		table_ptr += level_size;
-		fprintf(stderr, "after diff btwn table_ptr: %d, level size: %d\n",(void *) table_ptr - table, level_size);
 	}
-	fprintf(stderr, "diff btwn table_ptr: %d, diff between void and int *:  %d\n", (void *) table_ptr - table, sizeof(int**) );
 
 
 	// set last level of page table to garbage; for our purposes
@@ -42,9 +39,6 @@ int construct_table(void *table, int *levels, int num_levels) {
 	for(i = 0; i < levels[num_levels-1] * level_size; i++) {
 		*(table_ptr++) = (int *) i;
 	}
-
-	fprintf(stderr, "diff btwn table_ptr: %d, whole table size: %d\n",
-			(void *) table_ptr - table, max_table);
 
 	assert((void *) table_ptr - table == max_table);
 	
@@ -73,9 +67,6 @@ int main(int argc, char** argv) {
 
 	max_table = table_size * sizeof(void *);
 
-	fprintf(stderr, "size of page table: %d\n", table_size);
-	fprintf(stderr, "number of addresses to "
-			"test with: %d\n", total_addresses);
 	for (i = 0; i < levels; i++)
 		fprintf(stderr, "level %d: %d\n", i, level_sizes[i]);
 
@@ -90,5 +81,6 @@ int main(int argc, char** argv) {
 			levels);
 
 	fprintf(stderr, "number of translatable addresses: %d\n", table_lowest_addresses);
+	fprintf(stderr, "total size of page table: %d\n", max_table);
 
 }
