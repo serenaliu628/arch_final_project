@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <sdtlib.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 struct translation_thread {
