@@ -23,20 +23,20 @@ int translate_cpu(struct trans_thread *trans) {
 	while(trans->curr < trans->max-1) {
 		trans->curr_table = (void **) trans->curr_table[trans->offset[trans->curr]];
 		trans->curr++;
-		fprintf(stderr, "offset: %d\n", trans->offset[trans->curr]);
+		// fprintf(stderr, "offset: %d\n", trans->offset[trans->curr]);
 	}
 
 	return (int) *(trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
 
-float cpu_run_time(struct trans_thread **trans, int addresses) {
+float cpu_run_time(struct trans_thread *trans, int addresses) {
 	int i;
        	struct timeval start_time, stop_time;
 	
 	gettimeofday(&start_time, NULL);
 
 	for(i = 0; i < addresses; i++) {
-		translate_cpu(trans[i]);
+		translate_cpu(&trans[i]);
 	}
 
 	gettimeofday(&stop_time, NULL);
@@ -46,25 +46,28 @@ float cpu_run_time(struct trans_thread **trans, int addresses) {
 	return time_diff / 1000000.0;
 }
 
-struct trans_thread **gen_addresses(int num_addr, int levels, int *level_sizes,
-		void *pgd)
+struct trans_thread *gen_addresses(int num_addr, int levels, int *level_sizes,
+		void **pgd)
 {
 	int i,j;
-	struct trans_thread **new_threads = (struct trans_thread **)
+	struct trans_thread *new_threads = (struct trans_thread *)
 		malloc(sizeof(struct trans_thread) * num_addr);
 	if (!new_threads){ 
 		fprintf(stderr, "malloc failed: %d\n", strerror(errno));
 		exit(1);
 	}
 
+	fprintf(stderr, "got past malloc\n");
+
 	for(i = 0; i < num_addr; i++)
 	{
-		new_threads[i]->curr_table = (void **) pgd;
-		new_threads[i]->max = levels;
-		new_threads[i]->curr = 0;
+		new_threads[i].curr_table = pgd;
+		new_threads[i].max = levels;
+		new_threads[i].curr = 0;
 
 		for(j = 0; j < levels; j++) {
-			new_threads[i]->offset[j] = rand() % level_sizes[j];
+			new_threads[i].offset[j] = 
+				rand() % level_sizes[j];
 		}
 
 	}
@@ -119,6 +122,7 @@ int main(int argc, char** argv) {
 	    levels = argc-3;
 	int level_sizes[levels];
 	struct trans_thread *sample;
+	struct trans_thread *run_threads;
 
 	srand(time(NULL));
 	
@@ -160,7 +164,7 @@ int main(int argc, char** argv) {
 	fprintf(stderr, "number of translatable addresses: %d\n", table_lowest_addresses);
 	fprintf(stderr, "total size of page table: %d\n", max_table);
 	
-	sample = (struct trans_thread *) malloc(sizeof(struct trans_thread));
+	/*sample = (struct trans_thread *) malloc(sizeof(struct trans_thread));
 
 	sample->curr_table = pg_table;
 	sample->offset[0] = 1;
@@ -171,8 +175,20 @@ int main(int argc, char** argv) {
 	sample->max = 4;
 
 	int sample_test = translate_cpu(sample);
-	fprintf(stderr, "translated address: %d\n", sample_test );
+	fprintf(stderr, "translated address: %d\n", sample_test );*/
 
+	run_threads = gen_addresses(total_addresses, levels, level_sizes,
+			pg_table);
 
+	fprintf(stderr, "Got out of run_threads\n");
 
+	long time_taken = cpu_run_time(run_threads, total_addresses);	
+	
+	fprintf(stderr, "Got out of cpu_time\n");
+	
+
+	fprintf(stderr, "The CPU took %lu seconds to compute %d addresses. "
+			"For a table of depth %d&\n", 
+			time_taken, total_addresses, levels);
+	return 0;
 }
