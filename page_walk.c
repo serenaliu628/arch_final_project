@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <time.h>
 
 #define MAX_LEVELS 20
 
@@ -28,14 +29,14 @@ int translate_cpu(struct trans_thread *trans) {
 	return (int) *(trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
 
-float cpu_run_time(struct trans_thread *trans, int addresses) {
+float cpu_run_time(struct trans_thread **trans, int addresses) {
 	int i;
        	struct timeval start_time, stop_time;
 	
 	gettimeofday(&start_time, NULL);
 
 	for(i = 0; i < addresses; i++) {
-		translate_cpu(&trans[i]);
+		translate_cpu(trans[i]);
 	}
 
 	gettimeofday(&stop_time, NULL);
@@ -43,6 +44,32 @@ float cpu_run_time(struct trans_thread *trans, int addresses) {
 	long time_diff = ((stop_time.tv_sec * 1000000) + stop_time.tv_usec)
 		-((start_time.tv_sec * 1000000) + start_time.tv_usec);	
 	return time_diff / 1000000.0;
+}
+
+struct trans_thread **gen_addresses(int num_addr, int levels, int *level_sizes,
+		void *pgd)
+{
+	int i,j;
+	struct trans_thread **new_threads = (struct trans_thread **)
+		malloc(sizeof(struct trans_thread) * num_addr);
+	if (!new_threads){ 
+		fprintf(stderr, "malloc failed: %d\n", strerror(errno));
+		exit(1);
+	}
+
+	for(i = 0; i < num_addr; i++)
+	{
+		new_threads[i]->curr_table = (void **) pgd;
+		new_threads[i]->max = levels;
+		new_threads[i]->curr = 0;
+
+		for(j = 0; j < levels; j++) {
+			new_threads[i]->offset[j] = rand() % level_sizes[j];
+		}
+
+	}
+
+	return new_threads;
 }
 
 
@@ -92,6 +119,8 @@ int main(int argc, char** argv) {
 	    levels = argc-3;
 	int level_sizes[levels];
 	struct trans_thread *sample;
+
+	srand(time(NULL));
 	
 	// get number of pointers in contiguous page table
 	for(i = 1, j =0; i < argc; i++) {
@@ -135,9 +164,9 @@ int main(int argc, char** argv) {
 
 	sample->curr_table = pg_table;
 	sample->offset[0] = 1;
-	sample->offset[1] = 1;
-	sample->offset[2] = 1;
-	sample->offset[3] = 1;
+	sample->offset[1] = 0;
+	sample->offset[2] = 0;
+	sample->offset[3] = 0;
 	sample->curr = 0;
 	sample->max = 4;
 
