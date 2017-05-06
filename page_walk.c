@@ -20,47 +20,40 @@ int translate_cpu(struct trans_thread *trans) {
 	void **c = trans->curr_table;
 	while(trans->curr < trans->max) {
 		trans->curr_table = (void **) trans->curr_table[trans->offset[trans->curr]];
-		fprintf(stderr, "pointer no: %p\n", trans->curr_table - c);
 		trans->curr++;
 	}
-	fprintf(stderr, "pointer no: %p\n", trans->curr_table);
 
-	return (int) trans->curr_table;
+	return (int) trans->curr_table + trans->max;
 }
 
 
 int construct_table(void *table, int *levels, int num_levels) {
 	int i, j, level_size = 1;
         void **table_ptr = (void **) table,
-	    *level_ptr = (void *) table;
+	    **level_ptr;
 
 	// set intermediate addresses of table
 	for(i = 0; i < num_levels-1; i++)
 	{
-		fprintf(stderr, "table_ptr begin: %p\n", table_ptr);
 		level_size *= levels[i];
-		level_ptr = table + (table_ptr - (void **) table) + (level_size * sizeof(void *));
-		fprintf(stderr, "level_size: %d, level_ptr: %d, table_ptr: %d\n", level_size, (level_ptr - table) / sizeof(void *), table_ptr - (void **) table);
+		level_ptr = table_ptr + (level_size * sizeof(void *));
 
 		for(j = 0; j < level_size; j++) {
 			table_ptr[j] = level_ptr + ((j)*levels[i+1] * sizeof(void *));
-			fprintf(stderr, "whaa %d\n", (table_ptr[j] - table)/sizeof(void *));
-			//level_ptr += levels[i+1];
 		}	
 
-		table_ptr += (level_size * sizeof(void *));
-		fprintf(stderr, "table_ptr end: %p\n", table_ptr);
+		table_ptr += level_size;
 	}
+	assert((void *) table_ptr - table < max_table);
 
 
 	// set last level of page table to garbage; for our purposes
 	// it doesn't matter
-	for(i = 0; i < levels[num_levels-1] * level_size; i++) {
+	for(i = 0; i < level_size * levels[num_levels-1]; i++) {
 		*table_ptr = (void *) i;
-		table_ptr
+		table_ptr++;
 	}
 
-	fprintf(stderr, "diff: %d, max: %d\n", (void *) table_ptr-table, max_table);
 
 	assert((void *) table_ptr - table == max_table);
 	
@@ -104,7 +97,7 @@ int main(int argc, char** argv) {
 			levels);
 
 	for(i = 0; i < table_size; i++) {
-		fprintf(stderr, "address number: %d, address val: %d\n", i,  ((void **)pg_table[i])-pg_table);
+		fprintf(stderr, "address number: %d, address val: %d\n", i,  (void **) pg_table[i] - pg_table);
 	}
 
 	fprintf(stderr, "number of translatable addresses: %d\n", table_lowest_addresses);
@@ -113,14 +106,14 @@ int main(int argc, char** argv) {
 	sample = (struct trans_thread *) malloc(sizeof(struct trans_thread));
 
 	sample->curr_table = pg_table;
-	sample->offset[0] = 0;
+	sample->offset[0] = 1;
 	sample->offset[1] = 1;
-	sample->offset[2] = 0;
+	sample->offset[2] = 1;
 	sample->curr = 0;
-	sample->max = 3;
+	sample->max = 2;
 
 	int sample_test = translate_cpu(sample);
-	fprintf(stderr, "translated address: %d\n", (int) sample->curr_table);
+	fprintf(stderr, "translated address: %d\n", (int) sample->curr_table );
 
 
 
