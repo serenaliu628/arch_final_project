@@ -5,13 +5,26 @@
 #include <errno.h>
 #include <assert.h>
 
+#define MAX_LEVELS 20
+
 static int max_table;
 
-struct translation_thread {
-	void *current_table;
-	int *offset;
-	int current;
+struct trans_thread {
+	void **curr_table;
+	int offset[MAX_LEVELS];
+	int curr;
+	int max;
 };
+
+int translate_cpu(struct trans_thread *trans) {
+	while(trans->curr < trans->max) {
+		trans->curr_table = (void **) trans->curr_table[trans->curr];
+		trans->curr++;
+	}
+
+	return (int) trans->curr_table;
+}
+
 
 int construct_table(void *table, int *levels, int num_levels) {
 	int i, j, level_size = 1;
@@ -37,7 +50,7 @@ int construct_table(void *table, int *levels, int num_levels) {
 	// set last level of page table to garbage; for our purposes
 	// it doesn't matter
 	for(i = 0; i < levels[num_levels-1] * level_size; i++) {
-		*(table_ptr++) = (int *) i;
+		*(table_ptr++) = (void *) i;
 	}
 
 	assert((void *) table_ptr - table == max_table);
@@ -48,11 +61,12 @@ int construct_table(void *table, int *levels, int num_levels) {
 }
 
 int main(int argc, char** argv) {
-	void *pg_table;
+	void **pg_table;
 	int i, j, table_size = 0, level_size = 1, 
 	    total_addresses, table_lowest_addresses, 
 	    levels = argc-3;
 	int level_sizes[levels];
+	struct trans_thread *sample;
 	
 	// get number of pointers in contiguous page table
 	for(i = 1, j =0; i < argc; i++) {
@@ -80,7 +94,17 @@ int main(int argc, char** argv) {
 	table_lowest_addresses = construct_table(pg_table, level_sizes, 
 			levels);
 
+	for(i = table_size - table_lowest_addresses; i < table_size; i++) {
+		fprintf(stderr, "address number: %d, address val: %d\n", i, (int) pg_table[i]);
+	}
+
 	fprintf(stderr, "number of translatable addresses: %d\n", table_lowest_addresses);
 	fprintf(stderr, "total size of page table: %d\n", max_table);
+	
+	sample = (struct trans_thread *) malloc(sizeof(struct trans_thread));
+
+	sample->curr_table = pg_table;
+
+
 
 }
