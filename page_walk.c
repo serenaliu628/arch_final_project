@@ -24,7 +24,7 @@ int translate_cpu(struct trans_thread *trans) {
 		fprintf(stderr, "offset: %d\n", trans->offset[trans->curr]);
 	}
 
-	return (int) ((void *) trans->curr_table + trans->offset[trans->max-1]);
+	return (int) *(trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
 
 
@@ -39,11 +39,11 @@ int construct_table(void *table, int *levels, int num_levels) {
 		level_size *= levels[i];
 
 		// hideous but best way I could find to get next level
-		level_ptr = (void **) table + (level_size * sizeof(void *))+ ((void *)table_ptr - table);
+		level_ptr = (void **) table + (level_size)+ (((void *)table_ptr - table)/(sizeof(void*)));
 		// helpufl check: fprintf(stderr, "level_size: %d, level_ptr: %d, table_ptr: %d\n", level_size, (level_ptr- (void **) table) / sizeof(void *), table_ptr -  (void **) table);
 
 		for(j = 0; j < level_size; j++) {
-			table_ptr[j] = level_ptr + ((j)*levels[i+1] * sizeof(void *));
+			table_ptr[j] = level_ptr + ((j)*levels[i+1]);
 		}	
 
 		table_ptr += level_size;
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 			levels);
 
 	for(i = 0; i < table_size; i++) {
-		fprintf(stderr, "address number: %d, address intermediate value: %d, final value: %d, address: %d\n", i,  (void **) pg_table[i] - pg_table, pg_table[i], pg_table+i);
+		fprintf(stderr, "address number: %d, address intermediate value: %d, final value: %d, address: %d\n", i,  ((void **) pg_table[i] - pg_table) / sizeof(void *), pg_table[i], pg_table+i);
 	}
 
 	for (i = 0; i <  table_size - table_lowest_addresses; i++)
@@ -115,11 +115,12 @@ int main(int argc, char** argv) {
 	sample = (struct trans_thread *) malloc(sizeof(struct trans_thread));
 
 	sample->curr_table = pg_table;
-	sample->offset[0] = 0;
-	sample->offset[1] = 0;
-	sample->offset[2] = 0;
+	sample->offset[0] = 1;
+	sample->offset[1] = 1;
+	sample->offset[2] = 1;
+	sample->offset[3] = 1;
 	sample->curr = 0;
-	sample->max = 3;
+	sample->max = 4;
 
 	int sample_test = translate_cpu(sample);
 	fprintf(stderr, "translated address: %d\n", sample_test );
