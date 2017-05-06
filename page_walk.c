@@ -36,7 +36,10 @@ int construct_table(void *table, int *levels, int num_levels) {
 	for(i = 0; i < num_levels-1; i++)
 	{
 		level_size *= levels[i];
-		level_ptr = table_ptr + (level_size * sizeof(void *));
+
+		// hideous but best way I could find to get next level
+		level_ptr = (void **) table + (level_size * sizeof(void *))+ ((void *)table_ptr - table);
+		// helpufl check: fprintf(stderr, "level_size: %d, level_ptr: %d, table_ptr: %d\n", level_size, (level_ptr- (void **) table) / sizeof(void *), table_ptr -  (void **) table);
 
 		for(j = 0; j < level_size; j++) {
 			table_ptr[j] = level_ptr + ((j)*levels[i+1] * sizeof(void *));
@@ -107,7 +110,7 @@ int main(int argc, char** argv) {
 
 	sample->curr_table = pg_table;
 	sample->offset[0] = 1;
-	sample->offset[1] = 1;
+	sample->offset[1] = 0;
 	sample->offset[2] = 1;
 	sample->curr = 0;
 	sample->max = 2;
