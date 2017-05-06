@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #define MAX_LEVELS 20
 
@@ -26,6 +27,24 @@ int translate_cpu(struct trans_thread *trans) {
 
 	return (int) *(trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
+
+float cpu_run_time(struct trans_thread *trans, int addresses) {
+	int i;
+       	struct timeval start_time, stop_time;
+	
+	gettimeofday(&start_time, NULL);
+
+	for(i = 0; i < addresses; i++) {
+		translate_cpu(&trans[i]);
+	}
+
+	gettimeofday(&stop_time, NULL);
+
+	long time_diff = ((stop_time.tv_sec * 1000000) + stop_time.tv_usec)
+		-((start_time.tv_sec * 1000000) + start_time.tv_usec);	
+	return time_diff / 1000000.0;
+}
+
 
 
 int construct_table(void *table, int *levels, int num_levels) {
@@ -100,14 +119,14 @@ int main(int argc, char** argv) {
 	table_lowest_addresses = construct_table(pg_table, level_sizes, 
 			levels);
 
-	for(i = 0; i < table_size; i++) {
+	/*for(i = 0; i < table_size; i++) {
 		fprintf(stderr, "address number: %d, address intermediate value: %d, final value: %d, address: %d\n", i,  ((void **) pg_table[i] - pg_table) / sizeof(void *), pg_table[i], pg_table+i);
 	}
 
 	for (i = 0; i <  table_size - table_lowest_addresses; i++)
 	{
 		fprintf(stderr, "address %d, points to %d\n", pg_table + i, pg_table[i]);
-	}
+	}*/
 
 	fprintf(stderr, "number of translatable addresses: %d\n", table_lowest_addresses);
 	fprintf(stderr, "total size of page table: %d\n", max_table);
