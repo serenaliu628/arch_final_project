@@ -41,9 +41,9 @@ float cpu_run_time(struct trans_thread *trans, int addresses) {
 
 	gettimeofday(&stop_time, NULL);
 
-	long time_diff = ((stop_time.tv_sec * 1000000) + stop_time.tv_usec)
-		-((start_time.tv_sec * 1000000) + start_time.tv_usec);	
-	return time_diff / 1000000.0;
+	long time_diff = (stop_time.tv_usec)
+		-(start_time.tv_usec);	
+	return time_diff;
 }
 
 struct trans_thread *gen_addresses(int num_addr, int levels, int *level_sizes,
@@ -56,8 +56,6 @@ struct trans_thread *gen_addresses(int num_addr, int levels, int *level_sizes,
 		fprintf(stderr, "malloc failed: %d\n", strerror(errno));
 		exit(1);
 	}
-
-	fprintf(stderr, "got past malloc\n");
 
 	for(i = 0; i < num_addr; i++)
 	{
@@ -139,8 +137,6 @@ int main(int argc, char** argv) {
 
 	max_table = table_size * sizeof(void *);
 
-	for (i = 0; i < levels; i++)
-		fprintf(stderr, "level %d: %d\n", i, level_sizes[i]);
 
 	pg_table = (void *) malloc(sizeof(void *) * table_size);
 	
@@ -180,15 +176,13 @@ int main(int argc, char** argv) {
 	run_threads = gen_addresses(total_addresses, levels, level_sizes,
 			pg_table);
 
-	fprintf(stderr, "Got out of run_threads\n");
 
 	long time_taken = cpu_run_time(run_threads, total_addresses);	
 	
-	fprintf(stderr, "Got out of cpu_time\n");
 	
 
-	fprintf(stderr, "The CPU took %lu seconds to compute %d addresses. "
-			"For a table of depth %d&\n", 
+	fprintf(stderr, "The CPU took %lu microseconds to compute %d addresses. "
+			"For a table of depth %d.\n", 
 			time_taken, total_addresses, levels);
 	return 0;
 }
