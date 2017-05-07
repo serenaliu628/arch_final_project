@@ -49,20 +49,32 @@ static int max_table;
 
 struct trans_thread {
 	void **curr_table;
+	unsigned long cuda_result;
 	int offset[MAX_LEVELS];
 	int curr;
 	int max;
 };
 
 __host__ __device__ int translate_cpu(struct trans_thread *trans) {
+	unsigned long *gpu_ptr = (unsigned long *) trans->curr_table;
+	while(trans->curr < trans->max-1) {
+		gpu_ptr = (unsigned long *) gpu_ptr[trans->offset[trans->curr]]; 
+		trans->curr++;
+	}
+	return (int) *((int *) gpu_ptr + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
+}
+
+int translate_cpu2(struct trans_thread *trans) {
 	//void **c = trans->curr_table;
 	while(trans->curr < trans->max-1) {
 		trans->curr_table = (void **) trans->curr_table[trans->offset[trans->curr]];
 		trans->curr++;
 	}
-	return 0;
-	//(intptr_t) *(trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
+	// return 0;
+	return (int) *((int *) trans->curr_table + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
+
+
 
 // CUDA kernel: gpu_run_time<<<gridSize, blockSize>>>(d_new_threads, total_addresses);
 __global__ void gpu_run_time(struct trans_thread *trans, int addresses) {
@@ -77,9 +89,10 @@ __global__ void gpu_run_time(struct trans_thread *trans, int addresses) {
 	int idx = myblock * blocksize + subthread;
 
 
+
 	if(idx < addresses) {
 
-		//printf("Hello world! My block index is (%d,%d) [Grid dims=(%d,%d)], 3D-thread index within block=(%d,%d,%d) => \
+		// printf("Hello world! My block index is (%d,%d) [Grid dims=(%d,%d)], 3D-thread index within block=(%d,%d,%d) => \
 		thread index=%d\n", blockIdx.x, blockIdx.y, gridDim.x, gridDim.y, threadIdx.x, threadIdx.y, threadIdx.z, idx);
 		//translate_cpu(&trans[idx]);
 		/*while((*(trans+idx)).curr < (*(trans+idx)).max-1) {
@@ -99,7 +112,7 @@ float cpu_run_time(struct trans_thread *trans, int addresses) {
 	//gettimeofday(&start_time, NULL);
 
 	for(int i = 0; i < addresses; i++) {
-		translate_cpu(&trans[i]);
+		translate_cpu2(&trans[i]);
 		//printf("Hello world!.\n");
 	}
 
@@ -344,14 +357,14 @@ int main(int argc, char** argv) {
 	cpu_run_time(h_new_threads, total_addresses);
 	double cpu_time = read_timer();
 
-	fprintf(stderr, "The CPU took %lu microseconds to compute %d addresses. ""For a table of depth %d.\n",
-			cpu_time - gpu_time , total_addresses, levels);
+	fprintf(stderr, "The CPU took %lu microseconds to compute %d addresses. ""For a table of depth %d.\n",	cpu_time - gpu_time , total_addresses, levels);
 
 	printf("Timing results for n = %d\n", total_addresses);
-	printf("page table Transfer to GPU time: %f\n", tTransferToGPU_pgtable - tInit);
-	printf("threads Transfer to GPU time: %f\n", tTransferToGPU_threads - tInit2);
-	printf("Calculation time (GPU): %f\n", gpu_time - tTransferToGPU_threads);
-	//printf("Transfer from GPU time: %f\n", tTransferFromGPU - gpu_time);
+        //printf("page table Transfer to GPU time: %f\n", tTransferToGPU_pgtable - tInit);
+        //printf("threads Transfer to GPU time: %f\n", tTransferToGPU_threads - tInit2);
+        printf("Calculation time (GPU): %f\n", gpu_time - tTransferToGPU_threads);
+        //printf("Transfer from GPU time: %f\n", tTransferFromGPU - gpu_time);
+
 	printf("Calculation time (CPU): %f\n", cpu_time - gpu_time);
 
 
