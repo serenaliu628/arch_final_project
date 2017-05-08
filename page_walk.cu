@@ -5,7 +5,7 @@
   Copyright (c) 2017 Columbia University.
   All rights reserved.
 
-  Created by Serean Liu.
+  Created by Serean Liu and Raphael Norwitz.
 
 
 Note: Needs compute capability >= 2.0, so compile with:
