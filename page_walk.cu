@@ -1,18 +1,20 @@
 /***********************************************************************************
-  COMS 4824 Architecture Final Project
-  Implementing Page Walk runing on the GPU using CUDA
+  This work is COMS 4824 Architecture Final Project, advised by Professor Martha Kim.
+  
+  "A Walk on the Hyperthreaded Side: 
+       an Implementation and Analysis of Translating Virtual Addresses on a GPU"
 
   Copyright (c) 2017 Columbia University.
   All rights reserved.
 
-  Created by Serean Liu and Raphael Norwitz.
+  Created by Serena Liu and Raphael Norwitz.
 
-AWS EC2 instance configuration:
+  AWS EC2 instance configuration:
 --Instance type: g2.2xlarge
 --AMI Id: NVIDIA CUDA 7.5 Toolkit on Amazon Linux-0ce7aca3-5b96-4ff4-8396-05245687380a-ami-52420645.3 (ami-52f7b345)
 
-Softward Usage:
---compile: nvcc page_walk1.cu -o page_walk.out
+  Software Usage:
+--compile: nvcc page_walk.cu -o page_walk.out
 --output: ./page_walk.out -n <total addresses> <intermediate table parameters>
           (eg, ./page_walk.out -n 400 2 3 2 4)
 ************************************************************************************/
@@ -65,7 +67,8 @@ __host__ __device__ int translate_cpu(struct trans_thread *trans) {
 		gpu_ptr = (unsigned long *) gpu_ptr[trans->offset[trans->curr]]; 
 		trans->curr++;
 	}
-	return (int) *((int *) gpu_ptr + trans->offset[trans->curr]); // ((void *) trans->curr_table + trans->offset[trans->max-1]);
+	return (int) *((int *) gpu_ptr + trans->offset[trans->curr]); 
+	// ((void *) trans->curr_table + trans->offset[trans->max-1]);
 }
 
 //CPU counterpart 
@@ -93,10 +96,8 @@ __global__ void gpu_run_time(struct trans_thread *trans, int addresses) {
 	// assign overall id/index of the thread
 	int idx = myblock * blocksize + subthread;
 	
-	if(idx < addresses) {
-		
-		translate_cpu(&trans[idx]);
-	
+	if(idx < addresses) {		
+		translate_cpu(&trans[idx]);	
 	}
 }
 
@@ -149,8 +150,7 @@ int construct_table(void *table, int *levels, int num_levels) {
 		table_ptr++;
 	}
 	assert((intptr_t )table_ptr - (intptr_t )table == max_table);
-	// return number of entries at the lowest level of the
-	// page table
+	// return number of entries at the lowest level of the page table
 	return levels[num_levels-1] * level_size;
 }
 
@@ -174,9 +174,7 @@ struct trans_thread *gen_addresses(int num_addr, int levels, int *level_sizes, v
 			new_threads[i].offset[j] =
 				rand() % level_sizes[j];
 		}
-
 	}
-
 	return new_threads;
 }
 
@@ -343,4 +341,6 @@ int main(int argc, char** argv) {
 	cudaFree(d_pg_table);
 	cudaFree(d_new_threads);
 	return 0;
+	
+	
 }
